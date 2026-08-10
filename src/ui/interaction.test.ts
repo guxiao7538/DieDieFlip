@@ -11,7 +11,6 @@ import {
   createUiState,
   handleCellClick,
   handleInvClick,
-  handlePeelClick,
 } from './interaction';
 
 // ---------- 构造 helper ----------
@@ -147,37 +146,48 @@ describe('库存棋点击分派', () => {
   });
 });
 
-describe('取层角标', () => {
-  it('选中层数>=2 的己方叠层后可取层', () => {
+describe('取层操作条', () => {
+  it('选中层数>=2 的己方叠层:自动弹出取层条,确认后执行', () => {
     const s = mk(emptyBoard(), {}, {}, 0);
     put(s, 0, 0, open(P('兵', 'red'), P('兵', 'red'), P('车', 'red')));
     const ui = createUiState();
     const r1 = handleCellClick(s, ui, xy(0, 0));
     expect(r1.ui.selectedPos).toEqual(xy(0, 0));
-    const r2 = handlePeelClick(s, r1.ui);
-    expect(r2.ui.countDlg).toMatchObject({ kind: 'peel', min: 1, max: 2 });
-    const r3 = confirmCount(s, { ...r2.ui, countDlg: { ...r2.ui.countDlg!, value: 2 } });
+    expect(r1.ui.countDlg).toMatchObject({ kind: 'peel', min: 1, max: 2 });
+    const r3 = confirmCount(s, { ...r1.ui, countDlg: { ...r1.ui.countDlg!, value: 2 } });
     expect(r3.state).not.toBeNull();
     expect(r3.state!.players[0].inventory).toEqual([P('兵', 'red'), P('车', 'red')]);
   });
 
-  it('单层己方叠层不可取层', () => {
+  it('取层条打开时点棋盘目标:正常执行移动并关闭条', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('兵', 'red'), P('兵', 'red'), P('车', 'red'))); // 顶层车,可走远
+    put(s, 2, 0, open(P('兵', 'black')));
+    const ui = createUiState();
+    const r1 = handleCellClick(s, ui, xy(0, 0)); // 选中,弹出取层条
+    expect(r1.ui.countDlg).not.toBeNull();
+    const r2 = handleCellClick(s, r1.ui, xy(2, 0)); // 点吃子目标
+    expect(r2.state).not.toBeNull();
+    expect(r2.state!.players[0].inventory).toEqual([P('兵', 'black')]);
+    expect(r2.ui.countDlg).toBeNull();
+  });
+
+  it('单层己方叠层不弹取层条', () => {
     const s = mk(emptyBoard(), {}, {}, 0);
     put(s, 0, 0, open(P('兵', 'red')));
     const ui = createUiState();
     const r1 = handleCellClick(s, ui, xy(0, 0));
-    const r2 = handlePeelClick(s, r1.ui);
-    expect(r2.ui.countDlg).toBeNull();
+    expect(r1.ui.selectedPos).toEqual(xy(0, 0));
+    expect(r1.ui.countDlg).toBeNull();
   });
 
-  it('敌方顶层叠层不可取层(ADR-0001)', () => {
+  it('敌方顶层叠层不可选中,不弹取层条(ADR-0001)', () => {
     const s = mk(emptyBoard(), {}, {}, 0);
     put(s, 0, 0, open(P('车', 'black'), P('车', 'black')));
     const ui = createUiState();
     const r1 = handleCellClick(s, ui, xy(0, 0));
-    expect(r1.ui.selectedPos).toBeNull(); // 敌方叠层不可选中
-    const r2 = handlePeelClick(s, ui);
-    expect(r2.ui.countDlg).toBeNull();
+    expect(r1.ui.selectedPos).toBeNull();
+    expect(r1.ui.countDlg).toBeNull();
   });
 });
 

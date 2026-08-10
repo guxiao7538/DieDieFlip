@@ -261,12 +261,25 @@ describe('炮', () => {
     expect(targetsFor(s, xy(0, 0))).not.toContainEqual(xy(2, 0));
   });
 
-  it('暗格不可作炮架', () => {
+  it('暗格可作炮架:隔未翻开的棋打翻开的棋(传统象棋隔山打牛)', () => {
     const s = mk(emptyBoard(), {}, {}, 0);
     put(s, 0, 0, open(P('炮', 'red')));
-    put(s, 1, 0, down(P('兵', 'black')));
-    put(s, 2, 0, open(P('兵', 'black')));
-    expect(targetsFor(s, xy(0, 0))).not.toContainEqual(xy(2, 0));
+    put(s, 0, 2, down(P('兵', 'black'))); // 暗格作炮架
+    put(s, 0, 4, open(P('兵', 'black'))); // 目标
+    expect(targetsFor(s, xy(0, 0))).toContainEqual(xy(0, 4));
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 4) }),
+    ).toBe(true);
+  });
+
+  it('暗格不可作目标:炮架后遇暗格即不可打', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 1, open(P('兵', 'black'))); // 炮架(翻开)
+    put(s, 0, 2, down(P('兵', 'black'))); // 暗格(第二个棋,不可作目标)
+    put(s, 0, 3, open(P('兵', 'black')));
+    expect(targetsFor(s, xy(0, 0))).not.toContainEqual(xy(0, 2));
+    expect(targetsFor(s, xy(0, 0))).not.toContainEqual(xy(0, 3));
   });
 });
 
@@ -543,5 +556,115 @@ describe('悔棋', () => {
     expect(() =>
       applyMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 1) }),
     ).toThrow();
+  });
+});
+
+// ---------- 炮打吃完整矩阵 ----------
+
+describe('炮打吃矩阵', () => {
+  it('打敌方单枚:炮架为敌方棋', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 2, open(P('兵', 'black'))); // 炮架(敌方)
+    put(s, 0, 4, open(P('兵', 'black'))); // 目标
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 4) }),
+    ).toBe(true);
+  });
+
+  it('打敌方单枚:炮架为己方棋(规则:炮架可为敌方或己方)', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 2, open(P('车', 'red'))); // 炮架(己方)
+    put(s, 0, 4, open(P('兵', 'black'))); // 目标
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 4) }),
+    ).toBe(true);
+  });
+
+  it('打己方单枚(规则四.1 允许吃己方)', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 2, open(P('兵', 'black'))); // 炮架
+    put(s, 0, 4, open(P('兵', 'red'))); // 己方目标
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 4) }),
+    ).toBe(true);
+  });
+
+  it('炮架为叠层:整叠算一个炮架', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 2, open(P('车', 'black'), P('车', 'black'), P('兵', 'black'))); // 3层炮架
+    put(s, 0, 4, open(P('兵', 'black')));
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 4) }),
+    ).toBe(true);
+  });
+
+  it('炮架与目标之间可隔空格', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 2, open(P('兵', 'black'))); // 炮架
+    put(s, 0, 5, open(P('兵', 'black'))); // 目标,与炮架隔 2 空格
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 5) }),
+    ).toBe(true);
+  });
+
+  it('目标层数大于炮层数:不能吃(层数规则)', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 2, open(P('兵', 'black')));
+    put(s, 0, 4, open(P('车', 'black'), P('车', 'black'))); // 2层目标
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 4) }),
+    ).toBe(false);
+  });
+
+  it('炮为叠层(2层)时按总层数比较,可吃 2 层目标', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('兵', 'red'), P('炮', 'red'))); // 顶层炮,2层
+    put(s, 0, 2, open(P('兵', 'black')));
+    put(s, 0, 4, open(P('车', 'black'), P('车', 'black'))); // 2层目标
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 4) }),
+    ).toBe(true);
+  });
+
+  it('炮架与目标之间隔暗格:不可打(暗格阻挡裁决)', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 2, open(P('兵', 'black'))); // 炮架
+    put(s, 0, 3, down(P('兵', 'black'))); // 暗格在炮架与目标之间
+    put(s, 0, 4, open(P('兵', 'black'))); // 目标
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 4) }),
+    ).toBe(false);
+  });
+
+  it('目标与炮之间隔两个已翻开棋:不可打', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 2, open(P('兵', 'black')));
+    put(s, 0, 4, open(P('兵', 'black')));
+    put(s, 0, 6, open(P('兵', 'black'))); // 与炮之间隔两个棋
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 6) }),
+    ).toBe(false);
+  });
+
+  it('炮平移与打吃共存:空格可平移,目标可打吃', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 2, open(P('兵', 'black'))); // 炮架
+    put(s, 0, 4, open(P('兵', 'black'))); // 打吃目标
+    put(s, 2, 0, open(P('兵', 'black'))); // 横向阻挡
+    const targets = targetsFor(s, xy(0, 0));
+    expect(targets).toContainEqual(xy(0, 1)); // 纵向平移
+    expect(targets).toContainEqual(xy(0, 4)); // 纵向打吃
+    expect(targets).toContainEqual(xy(1, 0)); // 横向平移到阻挡棋前
+    expect(targets).not.toContainEqual(xy(2, 0)); // 炮架不可落子
+    expect(targets).not.toContainEqual(xy(3, 0)); // 不可越过
   });
 });

@@ -11,12 +11,12 @@ const TYPE_ORDER: PieceType[] = ['帅', '士', '象', '车', '马', '炮', '兵'
 
 export interface Handlers {
   onCell: (pos: Pos) => void;
-  onPeel: (pos: Pos) => void;
   onInv: (piece: Piece) => void;
   onUndo: () => void;
   onDrawProposal: () => void;
   onSurrender: () => void;
   onNewGame: () => void;
+  onMenu: () => void;
   onCount: (value: number) => void;
   onCountCancel: () => void;
   onAcceptDraw: () => void;
@@ -59,7 +59,7 @@ export function renderStatus(state: GameState, ui: UiState): HTMLElement {
   } else if (ui.selectedInv) {
     hint.textContent = '点空格放置,或点同类叠层';
   } else if (ui.selectedPos) {
-    hint.textContent = '点目标移动吃子,或点取层角标';
+    hint.textContent = '点目标移动吃子,或用底部取层条';
   } else {
     hint.textContent = '点暗格翻棋,点己方棋移动';
   }
@@ -212,6 +212,12 @@ export function renderActions(
   restart.addEventListener('click', h.onNewGame);
   el.appendChild(restart);
 
+  const menu = document.createElement('button');
+  menu.className = 'btn ghost';
+  menu.textContent = '主菜单';
+  menu.addEventListener('click', h.onMenu);
+  el.appendChild(menu);
+
   return el;
 }
 
@@ -254,57 +260,55 @@ export function renderBanner(state: GameState, h: Handlers): HTMLElement | null 
   return overlay;
 }
 
-// ---------- 数量选择器 ----------
+// ---------- 数量操作条(底部,不遮挡棋盘) ----------
 
-export function renderCountDlg(
+export function renderCountBar(
   ui: UiState,
   h: Handlers,
 ): HTMLElement | null {
   const dlg = ui.countDlg;
   if (!dlg) return null;
 
-  const overlay = document.createElement('div');
-  overlay.className = 'count-dlg';
-  const card = document.createElement('div');
-  card.className = 'count-card';
+  const bar = document.createElement('div');
+  bar.className = 'count-bar';
 
   const label = document.createElement('span');
-  label.textContent = dlg.kind === 'stack' ? '叠' : '取';
-  card.appendChild(label);
+  label.className = 'count-label';
+  label.textContent = dlg.kind === 'stack' ? '叠层' : '取层';
+  bar.appendChild(label);
 
   const minus = document.createElement('button');
   minus.className = 'stepper';
   minus.textContent = '−';
   minus.disabled = dlg.value <= dlg.min;
   minus.addEventListener('click', () => h.onCount(-1));
-  card.appendChild(minus);
+  bar.appendChild(minus);
 
   const val = document.createElement('span');
   val.className = 'val';
   val.textContent = String(dlg.value);
-  card.appendChild(val);
+  bar.appendChild(val);
 
   const plus = document.createElement('button');
   plus.className = 'stepper';
   plus.textContent = '+';
   plus.disabled = dlg.value >= dlg.max;
   plus.addEventListener('click', () => h.onCount(1));
-  card.appendChild(plus);
+  bar.appendChild(plus);
 
   const ok = document.createElement('button');
   ok.className = 'btn primary';
   ok.textContent = '确认';
   ok.addEventListener('click', () => h.onCount(0));
-  card.appendChild(ok);
+  bar.appendChild(ok);
 
   const cancel = document.createElement('button');
   cancel.className = 'btn ghost';
   cancel.textContent = '取消';
   cancel.addEventListener('click', h.onCountCancel);
-  card.appendChild(cancel);
+  bar.appendChild(cancel);
 
-  overlay.appendChild(card);
-  return overlay;
+  return bar;
 }
 
 // ---------- 提议/投降确认横幅 ----------

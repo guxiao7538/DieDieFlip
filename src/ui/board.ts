@@ -11,7 +11,6 @@ export function renderBoard(
   state: GameState,
   hl: Highlights,
   onCell: (pos: Pos) => void,
-  onPeel: (pos: Pos) => void,
 ): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'board-wrap';
@@ -49,18 +48,6 @@ export function renderBoard(
       if (hl.eatTargets.some((p) => samePos(p, pos))) el.classList.add('target-eat');
       if (hl.placeTargets.some((p) => samePos(p, pos))) el.classList.add('target-place');
       if (hl.stackTargets.some((p) => samePos(p, pos))) el.classList.add('target-stack');
-
-      // 取层角标:选中且层数>=2 的己方叠层
-      if (hl.peelable && samePos(hl.peelable, pos)) {
-        const btn = document.createElement('button');
-        btn.className = 'peel-btn';
-        btn.textContent = '取层';
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          onPeel(pos);
-        });
-        el.appendChild(btn);
-      }
 
       el.addEventListener('click', () => onCell(pos));
       board.appendChild(el);

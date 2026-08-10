@@ -14,13 +14,14 @@ import {
   createUiState,
   handleCellClick,
   handleInvClick,
-  handlePeelClick,
 } from './ui/interaction';
 import type { UiState } from './ui/interaction';
+import { renderMenu } from './ui/menu';
+import type { MenuUi } from './ui/menu';
 import {
   renderActions,
   renderBanner,
-  renderCountDlg,
+  renderCountBar,
   renderPending,
   renderPlayer,
   renderStatus,
@@ -30,20 +31,37 @@ import './ui/style.css';
 
 let state: GameState = createInitialState();
 let ui: UiState = createUiState();
+let view: 'menu' | 'game' = 'menu';
+let menuUi: MenuUi = { rulesOpen: false };
 
 const app = document.getElementById('app')!;
 
+function startGame(): void {
+  state = createInitialState();
+  ui = createUiState();
+  view = 'game';
+  refresh();
+}
+
 function refresh(): void {
+  if (view === 'menu') {
+    app.replaceChildren(
+      renderMenu(menuUi, {
+        onStart: startGame,
+        onToggleRules: () => {
+          menuUi = { rulesOpen: !menuUi.rulesOpen };
+          refresh();
+        },
+      }),
+    );
+    return;
+  }
+
   const hl = computeHighlights(state, ui);
   const h: Handlers = {
     onCell: (pos: Pos) => {
       const r = handleCellClick(state, ui, pos);
       if (r.state) state = r.state;
-      ui = r.ui;
-      refresh();
-    },
-    onPeel: (pos: Pos) => {
-      const r = handlePeelClick(state, ui);
       ui = r.ui;
       refresh();
     },
@@ -70,6 +88,10 @@ function refresh(): void {
     onNewGame: () => {
       state = createInitialState();
       ui = createUiState();
+      refresh();
+    },
+    onMenu: () => {
+      view = 'menu';
       refresh();
     },
     onCount: (delta: number) => {
@@ -113,11 +135,11 @@ function refresh(): void {
     renderStatus(state, ui),
     renderPlayer(state, 0, ui, hl, h.onInv),
     renderPlayer(state, 1, ui, hl, h.onInv),
-    renderBoard(state, hl, h.onCell, h.onPeel),
+    renderBoard(state, hl, h.onCell),
     renderActions(state, h),
   );
 
-  const top = renderBanner(state, h) ?? renderPending(ui, h) ?? renderCountDlg(ui, h);
+  const top = renderBanner(state, h) ?? renderPending(ui, h) ?? renderCountBar(ui, h);
   if (top) app.appendChild(top);
 }
 

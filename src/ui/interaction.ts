@@ -71,7 +71,7 @@ export function computeHighlights(state: GameState, ui: UiState): Highlights {
     stackTargets: [],
     peelable: null,
   };
-  if (state.winner !== null || state.draw || ui.countDlg || ui.pending) return h;
+  if (state.winner !== null || state.draw || ui.pending) return h;
   const me = state.current;
 
   if (ui.selectedInv) {
@@ -114,8 +114,9 @@ export function handleCellClick(state: GameState, ui: UiState, pos: Pos): ClickR
   if (state.winner !== null || state.draw || ui.pending) {
     return { state: null, ui };
   }
+  // 数量操作条打开时点棋盘:清除条,按正常规则处理本次点击(移动/放置/叠层/取消)
   if (ui.countDlg) {
-    return { state: null, ui: { ...ui, countDlg: null } }; // 点外部取消
+    return handleCellClick(state, { ...ui, countDlg: null }, pos);
   }
 
   const cell = cellAt(state.board, pos);
@@ -191,48 +192,36 @@ export function handleCellClick(state: GameState, ui: UiState, pos: Pos): ClickR
     return { state: null, ui: { ...ui, selectedPos: null } };
   }
 
-  // 未选中:点己方叠层选中
+  // 未选中:点己方叠层选中;层数>=2 时自动打开取层操作条(与移动高亮共存)
   if (isOwnPile(state, pos, me)) {
-    return { state: null, ui: { ...ui, selectedPos: pos } };
+    const cell = cellAt(state.board, pos);
+    const countDlg =
+      cell.kind === 'open' && cell.pieces.length >= 2
+        ? {
+            kind: 'peel' as const,
+            pos,
+            piece: null,
+            min: 1,
+            max: cell.pieces.length - 1,
+            value: 1,
+          }
+        : null;
+    return { state: null, ui: { ...ui, selectedPos: pos, countDlg } };
   }
   return { state: null, ui };
 }
 
-/** 取层角标点击:打开数量选择器(1..层数-1) */
-export function handlePeelClick(state: GameState, ui: UiState): ClickResult {
-  const pos = ui.selectedPos;
-  if (!pos || ui.countDlg) return { state: null, ui };
-  const cell = cellAt(state.board, pos);
-  if (cell.kind !== 'open' || cell.pieces.length < 2) {
-    return { state: null, ui };
-  }
-  if (!isOwnPile(state, pos, state.current)) return { state: null, ui };
-  return {
-    state: null,
-    ui: {
-      ...ui,
-      countDlg: {
-        kind: 'peel',
-        pos,
-        piece: null,
-        min: 1,
-        max: cell.pieces.length - 1,
-        value: 1,
-      },
-    },
-  };
-}
-
-/** 库存棋点击:选中/取消 */
+/** 库存棋点击:选中/取消(数量条打开时先关闭再选中) */
 export function handleInvClick(state: GameState, ui: UiState, piece: Piece): UiState {
-  if (state.winner !== null || state.draw || ui.pending || ui.countDlg) return ui;
+  if (state.winner !== null || state.draw || ui.pending) return ui;
+  const base = ui.countDlg ? { ...ui, countDlg: null } : ui;
   const selected =
-    ui.selectedInv &&
-    ui.selectedInv.type === piece.type &&
-    ui.selectedInv.color === piece.color
+    base.selectedInv &&
+    base.selectedInv.type === piece.type &&
+    base.selectedInv.color === piece.color
       ? null
       : piece;
-  return { ...ui, selectedInv: selected, selectedPos: null };
+  return { ...base, selectedInv: selected, selectedPos: null };
 }
 
 /** 数量选择器确认 */

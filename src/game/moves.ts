@@ -123,7 +123,9 @@ function cannonSlideTargets(state: GameState, from: Pos): Pos[] {
   );
 }
 
-/** 炮(打吃):横竖方向恰隔一个炮架(整叠算一个,暗格不可作炮架),吃子须层数满足 */
+/** 炮(打吃):与传统象棋一致的"隔山打牛"。
+ * 炮与目标之间恰好一个棋子作炮架——未翻开的暗格也是棋子,可作炮架;
+ * 目标必须已翻开(暗格不可被吃);整叠算一个炮架,层数须满足。 */
 function cannonCaptureTargets(state: GameState, from: Pos): Pos[] {
   const out: Pos[] = [];
   for (const d of STEP4) {
@@ -131,16 +133,16 @@ function cannonCaptureTargets(state: GameState, from: Pos): Pos[] {
     let screen = false;
     while (inBoard(pos)) {
       const cell = cellAt(state.board, pos);
-      if (cell.kind === 'facedown') break; // 暗格阻挡,不可作炮架
-      if (cell.pieces.length > 0) {
-        if (!screen) {
-          screen = true; // 第一个棋子作炮架
-        } else if (canCapture(state, from, pos)) {
-          out.push(pos); // 炮架后紧邻(中间无棋)的第一个棋子为目标
-          break;
-        } else {
-          break; // 层数不足,不能吃,停止
+      if (!screen) {
+        // 炮架:第一个有棋的格位(翻开或暗格都算)
+        if (cell.kind === 'facedown' || cell.pieces.length > 0) screen = true;
+      } else if (cell.kind === 'facedown') {
+        break; // 炮架后遇暗格:第二个棋,且暗格不可作目标
+      } else if (cell.pieces.length > 0) {
+        if (canCapture(state, from, pos)) {
+          out.push(pos); // 炮架后紧邻(中间无其他棋)的第一个棋子为目标
         }
+        break;
       }
       pos = { x: pos.x + d.x, y: pos.y + d.y };
     }
