@@ -1,0 +1,5 @@
+node_modules/
+dist/
+gui-test-screenshots/
+AGENTS.md
+.zcode/
