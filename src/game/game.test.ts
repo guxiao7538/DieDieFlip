@@ -407,7 +407,7 @@ describe('叠层', () => {
     ).toBe(false);
   });
 
-  it('可压顶敌方同类叠层,顶层变为己方色,该叠被接管', () => {
+  it('不可压顶敌方同类叠层(ADR-0004):叠层仅限己方叠层', () => {
     const s = mk(emptyBoard(), { inventory: [P('兵', 'red')] }, {}, 0);
     put(s, 0, 0, open(P('兵', 'black'), P('兵', 'black')));
     expect(
@@ -417,17 +417,18 @@ describe('叠层', () => {
         to: xy(0, 0),
         count: 1,
       }),
+    ).toBe(false);
+    // 己方同类叠层可叠
+    const s2 = mk(emptyBoard(), { inventory: [P('兵', 'red')] }, {}, 0);
+    put(s2, 0, 0, open(P('兵', 'red')));
+    expect(
+      isLegalMove(s2, {
+        kind: 'stack',
+        piece: P('兵', 'red'),
+        to: xy(0, 0),
+        count: 1,
+      }),
     ).toBe(true);
-    const s2 = applyMove(s, {
-      kind: 'stack',
-      piece: P('兵', 'red'),
-      to: xy(0, 0),
-      count: 1,
-    });
-    expect(topOf(cellAt(s2.board, xy(0, 0)))).toEqual(P('兵', 'red'));
-    expect(cellAt(s2.board, xy(0, 0))).toEqual(
-      open(P('兵', 'black'), P('兵', 'black'), P('兵', 'red')),
-    );
   });
 });
 
@@ -444,15 +445,14 @@ describe('取层', () => {
     );
   });
 
-  it('仅限己方叠层(ADR-0001):敌方顶层叠层不可取,己方压顶后可取', () => {
+  it('仅限己方叠层(ADR-0001):敌方顶层叠层不可取,己方顶层叠层可取', () => {
     const s = mk(emptyBoard(), {}, {}, 0);
     put(s, 0, 0, open(P('车', 'black'), P('车', 'black')));
     expect(isLegalMove(s, { kind: 'peel', from: xy(0, 0), count: 1 })).toBe(
       false,
     );
-    // 己方同类棋压顶(顶层变为己方色)后,轮到己方可取
     const s3 = mk(emptyBoard(), {}, {}, 0);
-    put(s3, 0, 0, open(P('兵', 'black'), P('兵', 'black'), P('兵', 'red')));
+    put(s3, 0, 0, open(P('兵', 'red'), P('兵', 'red')));
     expect(isLegalMove(s3, { kind: 'peel', from: xy(0, 0), count: 1 })).toBe(
       true,
     );

@@ -241,11 +241,12 @@ export function legalMoves(state: GameState, player: number): Move[] {
     }
   }
 
-  // 叠层:库存棋 → 同类叠层顶,一次可叠多枚
+  // 叠层:库存棋 → 同类己方叠层顶(ADR-0004:仅限己方叠层),一次可叠多枚
   for (const p of usablePieces(state, player)) {
     for (let y = 0; y < BOARD_H; y++) {
       for (let x = 0; x < BOARD_W; x++) {
         const to = { x, y };
+        if (!isOwnPile(state, to, player)) continue; // 目标顶层须为己方色
         const cell = cellAt(state.board, to);
         if (cell.kind !== 'open' || cell.pieces.length === 0) continue;
         if (topOf(cell)!.type !== p.type) continue;

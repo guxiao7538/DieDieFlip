@@ -131,10 +131,13 @@ function refresh(): void {
     },
   };
 
+  const players = document.createElement('div');
+  players.className = 'players';
+  players.append(renderPlayer(state, 0, ui, hl, h.onInv), renderPlayer(state, 1, ui, hl, h.onInv));
+
   app.replaceChildren(
     renderStatus(state, ui),
-    renderPlayer(state, 0, ui, hl, h.onInv),
-    renderPlayer(state, 1, ui, hl, h.onInv),
+    players,
     renderBoard(state, hl, h.onCell),
     renderActions(state, h),
   );

@@ -10,7 +10,7 @@
   --black: #222;
   --gold: #c9a227;
   --green: #2e7d32;
-  --board-h: calc(100dvh - 240px);
+  --board-h: calc(100dvh - 168px);
 }
 
 * {
@@ -40,8 +40,8 @@ body {
   height: 100dvh;
   max-width: 1060px;
   margin: 0 auto;
-  padding: 8px;
-  gap: 8px;
+  padding: 6px;
+  gap: 6px;
 }
 
 /* ---------- 状态栏 ---------- */
@@ -50,12 +50,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  padding: 6px 10px;
-  border-radius: 10px;
+  gap: 12px;
+  padding: 3px 10px;
+  border-radius: 8px;
   background: linear-gradient(180deg, #5a3d26, #46301e);
   border: 1px solid #6d4c2e;
-  font-size: 16px;
+  font-size: 15px;
   flex: none;
 }
 
@@ -87,11 +87,11 @@ body {
 }
 
 .player-panel {
-  padding: 6px 10px;
-  border-radius: 10px;
+  padding: 4px 8px;
+  border-radius: 8px;
   background: linear-gradient(180deg, #3f2c1b, #352518);
   border: 1px solid #54402a;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .player-panel.active {
@@ -102,9 +102,9 @@ body {
 .player-panel .p-title {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: 12px;
   color: #cbb98f;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 }
 
 .player-panel .p-title .name {
@@ -122,8 +122,8 @@ body {
 .inv-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  min-height: 38px;
+  gap: 4px;
+  min-height: 30px;
   align-items: center;
 }
 
@@ -151,8 +151,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 34% 28%, #fdf6e4 0%, #e9dbb8 60%, #d3c094 100%);
@@ -160,7 +160,7 @@ body {
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.4),
     inset 0 -2px 3px rgba(90, 60, 25, 0.3);
-  font-size: 19px;
+  font-size: 16px;
   font-weight: bold;
 }
 
@@ -226,7 +226,7 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  width: min(94vw, calc(var(--board-h) / 2));
+  width: min(96vw, calc(var(--board-h) / 2));
   aspect-ratio: 1 / 2;
   background:
     repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.05) 0 6px, transparent 6px 12px),
@@ -303,6 +303,7 @@ body {
   font-size: clamp(15px, 4.6vw, 30px);
   font-weight: bold;
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 
 .piece.piece-red {
@@ -335,6 +336,15 @@ body {
 .cell.selected {
   outline: 3px solid var(--gold);
   outline-offset: -3px;
+}
+
+/* 选中棋子悬浮动画 */
+.cell.selected .piece {
+  transform: translateY(-10%) scale(1.08);
+  box-shadow:
+    0 12px 20px rgba(0, 0, 0, 0.55),
+    inset 0 -2px 4px rgba(90, 60, 25, 0.35);
+  z-index: 1;
 }
 
 .cell.target-move::after {
@@ -385,13 +395,13 @@ body {
 }
 
 .btn {
-  padding: 7px 14px;
-  border-radius: 9px;
+  padding: 5px 12px;
+  border-radius: 8px;
   border: 1px solid #6d4c2e;
   background: linear-gradient(180deg, #6d4c2e, #57391f);
   color: var(--paper);
   font-family: inherit;
-  font-size: 15px;
+  font-size: 14px;
   cursor: pointer;
   transition: transform 0.08s ease, filter 0.12s ease;
 }
@@ -522,8 +532,9 @@ body {
       'status status status'
       'left board right'
       'actions actions actions';
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 10px;
+    --board-h: calc(100dvh - 118px);
   }
 
   .status {
@@ -556,16 +567,18 @@ body {
 /* ---------- 主界面 ---------- */
 
 .menu {
-  height: 100dvh;
-  max-width: 1060px;
-  margin: 0 auto;
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  padding: 24px;
-  position: relative;
+  gap: 16px;
+  padding: 20px;
+  background:
+    radial-gradient(ellipse at 50% 0%, #4a3423 0%, #2c1f14 70%);
+  z-index: 30;
+  overflow-y: auto;
 }
 
 .menu-decor {
