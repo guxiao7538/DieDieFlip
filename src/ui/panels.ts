@@ -260,7 +260,7 @@ export function renderBanner(state: GameState, h: Handlers): HTMLElement | null 
   return overlay;
 }
 
-// ---------- 数量操作条(底部,不遮挡棋盘) ----------
+// ---------- 数量操作条(侧边悬浮,不占布局) ----------
 
 export function renderCountBar(
   ui: UiState,
@@ -274,7 +274,11 @@ export function renderCountBar(
 
   const label = document.createElement('span');
   label.className = 'count-label';
-  label.textContent = dlg.kind === 'stack' ? '叠层' : '取层';
+  if (dlg.kind === 'stack') {
+    label.textContent = dlg.pos === null ? '叠' : '叠';
+  } else {
+    label.textContent = '取';
+  }
   bar.appendChild(label);
 
   const minus = document.createElement('button');
@@ -296,11 +300,14 @@ export function renderCountBar(
   plus.addEventListener('click', () => h.onCount(1));
   bar.appendChild(plus);
 
-  const ok = document.createElement('button');
-  ok.className = 'btn primary';
-  ok.textContent = '确认';
-  ok.addEventListener('click', () => h.onCount(0));
-  bar.appendChild(ok);
+  // 库存侧组合叠层:数量即选即用,无需确认;取层/棋盘侧叠层需要确认
+  if (!(dlg.kind === 'stack' && dlg.pos === null)) {
+    const ok = document.createElement('button');
+    ok.className = 'btn primary';
+    ok.textContent = '确认';
+    ok.addEventListener('click', () => h.onCount(0));
+    bar.appendChild(ok);
+  }
 
   const cancel = document.createElement('button');
   cancel.className = 'btn ghost';

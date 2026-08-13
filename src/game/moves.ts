@@ -163,6 +163,50 @@ export function targetsFor(state: GameState, from: Pos): Pos[] {
   return [];
 }
 
+/** 走法范围内所有格(忽略层数限制,用于"子力不足"等提示)。空格与有棋格都含,暗格不含。 */
+export function targetsInRange(state: GameState, from: Pos): Pos[] {
+  const top = topOf(cellAt(state.board, from));
+  if (!top) return [];
+  if (top.type === '车') {
+    return extend(state, from, STEP4, () => true);
+  }
+  if (top.type === '马') {
+    return STEP_DIAG.filter((d) => {
+      const to = { x: from.x + d.x, y: from.y + d.y };
+      return inBoard(to) && cellAt(state.board, to).kind === 'open';
+    }).map((d) => ({ x: from.x + d.x, y: from.y + d.y }));
+  }
+  if (top.type === '炮') {
+    return [...cannonSlideTargets(state, from), ...cannonCaptureRange(state, from)];
+  }
+  return STEP4.filter((d) => {
+    const to = { x: from.x + d.x, y: from.y + d.y };
+    return inBoard(to) && cellAt(state.board, to).kind === 'open';
+  }).map((d) => ({ x: from.x + d.x, y: from.y + d.y }));
+}
+
+/** 炮打吃的走法范围:炮架后第一个棋子(忽略层数,供子力不足提示) */
+function cannonCaptureRange(state: GameState, from: Pos): Pos[] {
+  const out: Pos[] = [];
+  for (const d of STEP4) {
+    let pos = { x: from.x + d.x, y: from.y + d.y };
+    let screen = false;
+    while (inBoard(pos)) {
+      const cell = cellAt(state.board, pos);
+      if (!screen) {
+        if (cell.kind === 'facedown' || cell.pieces.length > 0) screen = true;
+      } else if (cell.kind === 'facedown') {
+        break;
+      } else if (cell.pieces.length > 0) {
+        out.push(pos); // 不管层数,均在打吃范围内
+        break;
+      }
+      pos = { x: pos.x + d.x, y: pos.y + d.y };
+    }
+  }
+  return out;
+}
+
 /** 库存中当前玩家可用于放置/叠层的棋子(去重)。
  * 默认规则:仅己方色;可选规则A:含对方色(棋子保留其实际颜色) */
 function usablePieces(state: GameState, player: number): Piece[] {

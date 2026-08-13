@@ -118,17 +118,42 @@ describe('库存棋点击分派', () => {
     expect(r.state!.board[7]![3]).toEqual(open(P('兵', 'red')));
   });
 
-  it('点库存棋后点同类叠层 → 弹数量选择器 → 确认执行', () => {
+  it('库存多枚:点库存棋在库存侧弹数量条(pos=null),点目标按数量直接叠', () => {
     const s = mk(emptyBoard(), { inventory: [P('兵', 'red'), P('兵', 'red')] }, {}, 0);
     put(s, 0, 0, open(P('兵', 'red')));
     const ui = handleInvClick(s, createUiState(), P('兵', 'red'));
-    const r = handleCellClick(s, ui, xy(0, 0));
-    expect(r.state).toBeNull();
-    expect(r.ui.countDlg).toMatchObject({ kind: 'stack', min: 1, max: 2 });
-    const r2 = confirmCount(s, { ...r.ui, countDlg: { ...r.ui.countDlg!, value: 2 } });
-    expect(r2.state).not.toBeNull();
-    const pile = r2.state!.board[0]![0]!;
+    expect(ui.countDlg).toMatchObject({ kind: 'stack', pos: null, min: 1, max: 2 });
+    // 调数量到 2,点棋盘目标直接叠 2 枚
+    const dlg = { ...ui.countDlg!, value: 2 };
+    const r = handleCellClick(s, { ...ui, countDlg: dlg }, xy(0, 0));
+    expect(r.state).not.toBeNull();
+    expect(r.ui.countDlg).toBeNull();
+    const pile = r.state!.board[0]![0]!;
     expect(pile.kind === 'open' ? pile.pieces.length : 0).toBe(3);
+  });
+
+  it('库存单枚:点库存棋不弹数量条,点目标直接叠 1 枚', () => {
+    const s = mk(emptyBoard(), { inventory: [P('兵', 'red')] }, {}, 0);
+    put(s, 0, 0, open(P('兵', 'red')));
+    const ui = handleInvClick(s, createUiState(), P('兵', 'red'));
+    expect(ui.countDlg).toBeNull();
+    const r = handleCellClick(s, ui, xy(0, 0));
+    expect(r.state).not.toBeNull();
+    const pile = r.state!.board[0]![0]!;
+    expect(pile.kind === 'open' ? pile.pieces.length : 0).toBe(2);
+  });
+
+  it('点击子力不足的目标格:保持选中并返回 toast', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('车', 'red')));
+    put(s, 2, 0, open(P('兵', 'black'), P('兵', 'black'))); // 2层,吃不动
+    const ui = createUiState();
+    const r1 = handleCellClick(s, ui, xy(0, 0));
+    expect(r1.ui.selectedPos).toEqual(xy(0, 0));
+    const r2 = handleCellClick(s, r1.ui, xy(2, 0));
+    expect(r2.state).toBeNull(); // 不执行
+    expect(r2.toast).toBe('子力不足');
+    expect(r2.ui.selectedPos).toEqual(xy(0, 0)); // 保持选中
   });
 
   it('点库存棋后点非目标格取消库存选中', () => {

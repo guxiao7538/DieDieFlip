@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { fullSet } from './pieces';
-import { cellAt, isLegalMove, legalMoves, targetsFor, topOf } from './moves';
+import { cellAt, isLegalMove, legalMoves, targetsFor, targetsInRange, topOf } from './moves';
 import {
   applyMove,
   countPieces,
@@ -456,6 +456,36 @@ describe('取层', () => {
     expect(isLegalMove(s3, { kind: 'peel', from: xy(0, 0), count: 1 })).toBe(
       true,
     );
+  });
+});
+
+// ---------- 走法范围(子力不足提示用) ----------
+
+describe('targetsInRange', () => {
+  it('包含层数不足的目标格(车)', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('车', 'red')));
+    put(s, 2, 0, open(P('兵', 'black'), P('兵', 'black'))); // 2层,吃不动
+    const range = targetsInRange(s, xy(0, 0));
+    expect(range).toContainEqual(xy(2, 0)); // 层数不足也在范围内
+    expect(targetsFor(s, xy(0, 0))).not.toContainEqual(xy(2, 0));
+  });
+
+  it('炮打吃范围:炮架后第一个棋(忽略层数)', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('炮', 'red')));
+    put(s, 0, 2, open(P('兵', 'black'))); // 炮架
+    put(s, 0, 4, open(P('车', 'black'), P('车', 'black'))); // 2层,吃不动
+    const range = targetsInRange(s, xy(0, 0));
+    expect(range).toContainEqual(xy(0, 4));
+    expect(targetsFor(s, xy(0, 0))).not.toContainEqual(xy(0, 4));
+  });
+
+  it('暗格不在范围内', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('兵', 'red')));
+    put(s, 1, 0, down(P('兵', 'black')));
+    expect(targetsInRange(s, xy(0, 0))).not.toContainEqual(xy(1, 0));
   });
 });
 

@@ -33,6 +33,9 @@ export function renderBoard(
           const piece = document.createElement('div');
           piece.className = `piece ${top.color === 'red' ? 'piece-red' : 'piece-black'}`;
           piece.textContent = glyphOf(top);
+          if (cell.pieces.length > 1) {
+            piece.dataset.ply = String(Math.min(cell.pieces.length, 4)); // 立体堆叠层数(视觉封顶)
+          }
           el.appendChild(piece);
           if (cell.pieces.length > 1) {
             const ply = document.createElement('span');
@@ -48,6 +51,7 @@ export function renderBoard(
       if (hl.eatTargets.some((p) => samePos(p, pos))) el.classList.add('target-eat');
       if (hl.placeTargets.some((p) => samePos(p, pos))) el.classList.add('target-place');
       if (hl.stackTargets.some((p) => samePos(p, pos))) el.classList.add('target-stack');
+      if (hl.weakTargets.some((p) => samePos(p, pos))) el.classList.add('target-weak');
 
       el.addEventListener('click', () => onCell(pos));
       board.appendChild(el);

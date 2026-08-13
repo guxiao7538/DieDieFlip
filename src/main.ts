@@ -43,6 +43,18 @@ function startGame(): void {
   refresh();
 }
 
+let toastTimer: number | undefined;
+
+function showToast(text: string): void {
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = text;
+  app.appendChild(t);
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => t.remove(), 1200);
+}
+
 function refresh(): void {
   if (view === 'menu') {
     app.replaceChildren(
@@ -64,6 +76,7 @@ function refresh(): void {
       if (r.state) state = r.state;
       ui = r.ui;
       refresh();
+      if (r.toast) showToast(r.toast); // 必须在 refresh 之后,否则被 replaceChildren 清掉
     },
     onInv: (piece) => {
       ui = handleInvClick(state, ui, piece);
