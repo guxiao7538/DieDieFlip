@@ -44,7 +44,8 @@ function mk(
     winner: null,
     draw: false,
     history: [],
-    options: { useEnemyForPlace: false, eatFacedown: false },
+    moveLog: [],
+    options: { useEnemyForPlace: false, eatFacedown: false, allowLowCapture: false },
   };
 }
 
@@ -154,6 +155,28 @@ describe('库存棋点击分派', () => {
     expect(r2.state).toBeNull(); // 不执行
     expect(r2.toast).toBe('子力不足');
     expect(r2.ui.selectedPos).toEqual(xy(0, 0)); // 保持选中
+  });
+
+  it('低吃高开启:吃己方高叠直接执行,吃对方高叠仍是子力不足', () => {
+    const s = {
+      ...mk(emptyBoard(), {}, {}, 0),
+      options: { useEnemyForPlace: false, eatFacedown: false, allowLowCapture: true },
+    };
+    put(s, 0, 0, open(P('车', 'red')));
+    put(s, 2, 0, open(P('兵', 'red'), P('兵', 'red'))); // 己方2层:低吃高可吃
+    put(s, 0, 2, open(P('兵', 'black'), P('兵', 'black'))); // 对方2层:仍吃不动
+    const ui = createUiState();
+    const r1 = handleCellClick(s, ui, xy(0, 0));
+    expect(r1.ui.selectedPos).toEqual(xy(0, 0));
+    // 吃己方2层:直接执行
+    const r2 = handleCellClick(s, r1.ui, xy(2, 0));
+    expect(r2.state).not.toBeNull();
+    expect(r2.toast).toBeUndefined();
+    // 吃对方2层:子力不足,保持选中
+    const r3 = handleCellClick(s, createUiState(), xy(0, 0));
+    const r4 = handleCellClick(s, r3.ui, xy(0, 2));
+    expect(r4.state).toBeNull();
+    expect(r4.toast).toBe('子力不足');
   });
 
   it('点库存棋后点非目标格取消库存选中', () => {

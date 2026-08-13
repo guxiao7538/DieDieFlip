@@ -1,11 +1,12 @@
 /**
- * 面板渲染:状态栏、双方库存(圆形棋子)、操作栏、终局横幅、数量选择器。
+ * 面板渲染:状态栏、双方库存(圆形棋子)、操作栏、终局横幅、数量选择器、记谱面板。
  */
 
 import { countPieces } from '../game/state';
 import type { GameState, Piece, PieceType, Pos } from '../game/types';
 import { glyphOf } from './glyph';
 import type { Highlights, UiState } from './interaction';
+import { moverColor, notationFor } from './notation';
 
 const TYPE_ORDER: PieceType[] = ['帅', '士', '象', '车', '马', '炮', '兵'];
 
@@ -23,6 +24,7 @@ export interface Handlers {
   onRejectDraw: () => void;
   onConfirmSurrender: () => void;
   onCancelPending: () => void;
+  onToggleLog: () => void;
 }
 
 // ---------- 状态栏 ----------
@@ -42,9 +44,14 @@ export function renderStatus(state: GameState, ui: UiState): HTMLElement {
   }
   el.appendChild(turn);
 
+  const mode = document.createElement('span');
+  mode.className = `mode-badge${state.options.allowLowCapture ? ' on' : ''}`;
+  mode.textContent = state.options.allowLowCapture ? '低吃高' : '标准';
+  el.appendChild(mode);
+
   const round = document.createElement('span');
   round.className = 'hint';
-  round.textContent = `第 ${state.history.length} 步`;
+  round.textContent = `第 ${state.moveLog.length} 步`;
   el.appendChild(round);
 
   const hint = document.createElement('span');
@@ -65,6 +72,60 @@ export function renderStatus(state: GameState, ui: UiState): HTMLElement {
   }
   el.appendChild(hint);
 
+  return el;
+}
+
+// ---------- 记谱面板 ----------
+
+/**
+ * 坐标式记谱列表。快照取自 history:第 i 步之前 = history[i];
+ * 第 i 步之后 = history[i+1](最后一步为当前 state)。
+ */
+export function renderMoveLog(state: GameState): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'move-log';
+
+  const title = document.createElement('div');
+  title.className = 'log-title';
+  title.textContent = `棋谱 · ${state.moveLog.length} 步`;
+  el.appendChild(title);
+
+  const list = document.createElement('div');
+  list.className = 'move-log-list';
+
+  const n = state.moveLog.length;
+  state.moveLog.forEach((move, i) => {
+    const before = state.history[i]!;
+    const after = i === n - 1 ? state : (state.history[i + 1] ?? state);
+    const color = moverColor(after);
+
+    const row = document.createElement('div');
+    row.className = `log-row${i === n - 1 ? ' current' : ''}`;
+
+    const no = document.createElement('span');
+    no.className = 'log-no';
+    no.textContent = `${i + 1}.`;
+
+    const side = document.createElement('span');
+    side.className = color === 'red' ? 'log-side-red' : 'log-side-black';
+    side.textContent = color === 'red' ? '紅' : '黑';
+
+    const text = document.createElement('span');
+    text.className = 'log-text';
+    text.textContent = notationFor(move, before, after);
+
+    row.append(no, side, text);
+    list.appendChild(row);
+  });
+
+  if (state.moveLog.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'log-text';
+    empty.textContent = '尚未落子';
+    list.appendChild(empty);
+  }
+
+  el.appendChild(list);
   return el;
 }
 

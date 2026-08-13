@@ -3,9 +3,10 @@
  *
  * 已裁决的规则边界(见 CONTEXT.md / docs/adr/):
  * - 取层仅限最上层为己方色的叠层(ADR-0001)
+ * - 叠层仅限己方同类叠层(ADR-0004)
  * - 移动以整叠为单位;吃子时整叠进吃子者库存
- * - 暗格不可落子、不可作炮架、路径上遇暗格即阻挡(可选规则B未开放时)
- * - 叠层可压顶敌方同类叠层(叠入棋为己方色,顶层即为己方色,符合规则五.1)
+ * - 暗格不可落子、不可被吃;可作炮架,炮打吃路径上遇暗格即阻挡
+ * - 低吃高玩法:仅放开吃己方棋的层数限制,吃对方棋始终须层数满足
  */
 
 import { isPawnLike } from './pieces';
@@ -52,12 +53,18 @@ export function isOwnPile(state: GameState, pos: Pos, player: number): boolean {
   return top !== null && top.color === state.players[player]!.color;
 }
 
-/** 攻击方叠层能否吃目标格:层数多者可吃少者或同层互吃,即攻击层数 >= 目标层数 */
+/** 攻击方叠层能否吃目标格:层数多者可吃少者或同层互吃,即攻击层数 >= 目标层数。
+ * 低吃高玩法仅放开"吃己方棋"(目标顶层与攻击顶层同色)的层数限制,
+ * 吃对方棋始终须层数满足(规则五.3)。 */
 function canCapture(state: GameState, from: Pos, to: Pos): boolean {
   const atk = cellAt(state.board, from);
   const tgt = cellAt(state.board, to);
   if (atk.kind !== 'open' || tgt.kind !== 'open') return false;
-  return atk.pieces.length >= tgt.pieces.length;
+  if (atk.pieces.length >= tgt.pieces.length) return true;
+  if (!state.options.allowLowCapture) return false;
+  const atkTop = atk.pieces[atk.pieces.length - 1]!;
+  const tgtTop = tgt.pieces[tgt.pieces.length - 1]!;
+  return tgtTop.color === atkTop.color;
 }
 
 /** 普通走子(车马士象帅兵)的目标判定:空格可走,已翻开叠层可吃(层数满足),暗格不可 */

@@ -30,6 +30,8 @@ export interface UiState {
   selectedInv: Piece | null;
   countDlg: CountDlg | null;
   pending: Pending | null;
+  /** 竖屏记谱浮层开关 */
+  logOpen: boolean;
 }
 
 /** 高亮结果:渲染层着色依据 */
@@ -47,7 +49,13 @@ export interface Highlights {
 }
 
 export function createUiState(): UiState {
-  return { selectedPos: null, selectedInv: null, countDlg: null, pending: null };
+  return {
+    selectedPos: null,
+    selectedInv: null,
+    countDlg: null,
+    pending: null,
+    logOpen: false,
+  };
 }
 
 const samePos = (a: Pos, b: Pos) => a.x === b.x && a.y === b.y;

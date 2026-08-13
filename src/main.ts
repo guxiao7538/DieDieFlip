@@ -2,6 +2,7 @@
 
 import {
   createInitialState,
+  DEFAULT_OPTIONS,
   markDraw,
   surrender,
   undo,
@@ -22,6 +23,7 @@ import {
   renderActions,
   renderBanner,
   renderCountBar,
+  renderMoveLog,
   renderPending,
   renderPlayer,
   renderStatus,
@@ -32,12 +34,20 @@ import './ui/style.css';
 let state: GameState = createInitialState();
 let ui: UiState = createUiState();
 let view: 'menu' | 'game' = 'menu';
-let menuUi: MenuUi = { rulesOpen: false };
+// 低吃高玩法默认开启(规则七)
+let menuUi: MenuUi = {
+  rulesOpen: false,
+  optionsOpen: false,
+  allowLowCapture: true,
+};
 
 const app = document.getElementById('app')!;
 
 function startGame(): void {
-  state = createInitialState();
+  state = createInitialState({
+    ...DEFAULT_OPTIONS,
+    allowLowCapture: menuUi.allowLowCapture,
+  });
   ui = createUiState();
   view = 'game';
   refresh();
@@ -59,9 +69,21 @@ function refresh(): void {
   if (view === 'menu') {
     app.replaceChildren(
       renderMenu(menuUi, {
-        onStart: startGame,
+        onOpenOptions: () => {
+          menuUi = { ...menuUi, optionsOpen: true };
+          refresh();
+        },
+        onConfirmStart: startGame,
+        onCancelOptions: () => {
+          menuUi = { ...menuUi, optionsOpen: false };
+          refresh();
+        },
+        onToggleLowCapture: () => {
+          menuUi = { ...menuUi, allowLowCapture: !menuUi.allowLowCapture };
+          refresh();
+        },
         onToggleRules: () => {
-          menuUi = { rulesOpen: !menuUi.rulesOpen };
+          menuUi = { ...menuUi, rulesOpen: !menuUi.rulesOpen };
           refresh();
         },
       }),
@@ -99,7 +121,7 @@ function refresh(): void {
       refresh();
     },
     onNewGame: () => {
-      state = createInitialState();
+      state = createInitialState(state.options);
       ui = createUiState();
       refresh();
     },
@@ -142,11 +164,19 @@ function refresh(): void {
       ui = { ...ui, pending: null };
       refresh();
     },
+    onToggleLog: () => {
+      ui = { ...ui, logOpen: !ui.logOpen };
+      refresh();
+    },
   };
 
   const players = document.createElement('div');
   players.className = 'players';
-  players.append(renderPlayer(state, 0, ui, hl, h.onInv), renderPlayer(state, 1, ui, hl, h.onInv));
+  // 右侧栏:黑方库存在上,记谱面板在下(宽屏);竖屏记谱面板由浮层提供
+  const sideRight = document.createElement('div');
+  sideRight.className = 'side-right';
+  sideRight.append(renderPlayer(state, 1, ui, hl, h.onInv), renderMoveLog(state));
+  players.append(renderPlayer(state, 0, ui, hl, h.onInv), sideRight);
 
   app.replaceChildren(
     renderStatus(state, ui),
@@ -157,6 +187,37 @@ function refresh(): void {
 
   const top = renderBanner(state, h) ?? renderPending(ui, h) ?? renderCountBar(ui, h);
   if (top) app.appendChild(top);
+
+  // 竖屏记谱入口:悬浮「谱」按钮 + 浮层(宽屏由 CSS 隐藏)
+  const fab = document.createElement('button');
+  fab.className = 'log-fab';
+  fab.textContent = '棋谱';
+  fab.addEventListener('click', h.onToggleLog);
+  app.appendChild(fab);
+
+  if (ui.logOpen) {
+    const overlay = document.createElement('div');
+    overlay.className = 'log-overlay';
+    const card = document.createElement('div');
+    card.className = 'log-card';
+    const head = document.createElement('div');
+    head.className = 'log-head';
+    const close = document.createElement('button');
+    close.className = 'btn ghost';
+    close.textContent = '关闭';
+    close.addEventListener('click', h.onToggleLog);
+    head.appendChild(close);
+    card.append(head, renderMoveLog(state));
+    overlay.appendChild(card);
+    app.appendChild(overlay);
+  }
+
+  // 记谱列表滚到底(需在插入 DOM 后生效)
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.move-log-list').forEach((l) => {
+      l.scrollTop = l.scrollHeight;
+    });
+  });
 }
 
 refresh();

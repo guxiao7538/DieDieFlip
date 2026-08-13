@@ -17,8 +17,8 @@ function mk(cells: Cell[][] = emptyBoard(), p0: Partial<PlayerState> = {}, p1: P
   return {
     board: cells,
     players: [{ color: 'red', inventory: [], ...p0 }, { color: 'black', inventory: [], ...p1 }],
-    current, winner: null, draw: false, history: [],
-    options: { useEnemyForPlace: false, eatFacedown: false },
+    current, winner: null, draw: false, history: [], moveLog: [],
+    options: { useEnemyForPlace: false, eatFacedown: false, allowLowCapture: false },
   };
 }
 

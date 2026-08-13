@@ -55,7 +55,8 @@ function mk(
     winner: null,
     draw: false,
     history: [],
-    options: { useEnemyForPlace: false, eatFacedown: false },
+    moveLog: [],
+    options: { useEnemyForPlace: false, eatFacedown: false, allowLowCapture: false },
   };
 }
 
@@ -340,6 +341,85 @@ describe('层数吃子', () => {
   });
 });
 
+// ---------- 可选规则E:低吃高 ----------
+
+describe('低吃高玩法(仅放开吃己方)', () => {
+  const low = { useEnemyForPlace: false, eatFacedown: false, allowLowCapture: true };
+
+  it('开启后单枚(1层)可吃己方 3 层叠层', () => {
+    const s = { ...mk(emptyBoard(), {}, {}, 0), options: low };
+    put(s, 1, 1, open(P('车', 'red')));
+    put(s, 2, 1, open(P('兵', 'red'), P('兵', 'red'), P('兵', 'red')));
+    const s2 = applyMove(s, { kind: 'move', from: xy(1, 1), to: xy(2, 1) });
+    expect(cellAt(s2.board, xy(2, 1))).toEqual(open(P('车', 'red')));
+    expect(s2.players[0].inventory).toHaveLength(3); // 己方兵回收进库存
+  });
+
+  it('开启后吃对方 2 层仍受层数限制(非法)', () => {
+    const s = { ...mk(emptyBoard(), {}, {}, 0), options: low };
+    put(s, 1, 1, open(P('车', 'red')));
+    put(s, 2, 1, open(P('兵', 'black'), P('兵', 'black')));
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(1, 1), to: xy(2, 1) }),
+    ).toBe(false);
+  });
+
+  it('关闭(标准规则)时吃己方高叠同样受限', () => {
+    const s = mk(emptyBoard(), {}, {}, 0); // allowLowCapture: false
+    put(s, 1, 1, open(P('车', 'red')));
+    put(s, 2, 1, open(P('兵', 'red'), P('兵', 'red')));
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(1, 1), to: xy(2, 1) }),
+    ).toBe(false);
+  });
+
+  it('开启后炮打吃:打己方高叠放开,打对方高叠受限', () => {
+    // 打己方:炮(1层)隔炮架打己方 3 层车叠
+    const s = { ...mk(emptyBoard(), {}, {}, 0), options: low };
+    put(s, 1, 1, open(P('炮', 'red')));
+    put(s, 2, 1, open(P('兵', 'red'))); // 炮架
+    put(s, 3, 1, open(P('车', 'red'), P('车', 'red'), P('车', 'red')));
+    expect(
+      isLegalMove(s, { kind: 'move', from: xy(1, 1), to: xy(3, 1) }),
+    ).toBe(true);
+    // 同局面目标换成对方色:层数不足,非法
+    const foe = { ...mk(emptyBoard(), {}, {}, 0), options: low };
+    put(foe, 1, 1, open(P('炮', 'red')));
+    put(foe, 2, 1, open(P('兵', 'red')));
+    put(foe, 3, 1, open(P('车', 'black'), P('车', 'black'), P('车', 'black')));
+    expect(
+      isLegalMove(foe, { kind: 'move', from: xy(1, 1), to: xy(3, 1) }),
+    ).toBe(false);
+  });
+
+  it('放置/叠层/取层不受低吃高影响', () => {
+    const s = { ...mk(emptyBoard(), {}, {}, 0), options: low };
+    put(s, 1, 1, open(P('兵', 'red'), P('兵', 'red')));
+    // 叠层仍仅限己方同类叠层
+    const s2: GameState = {
+      ...s,
+      players: [
+        { color: 'red', inventory: [P('兵', 'red')] },
+        { color: 'black', inventory: [] },
+      ],
+    };
+    expect(
+      isLegalMove(s2, { kind: 'stack', piece: P('兵', 'red'), to: xy(1, 1), count: 1 }),
+    ).toBe(true);
+    // 取层仍须保留至少一枚
+    expect(
+      isLegalMove(s2, { kind: 'peel', from: xy(1, 1), count: 2 }),
+    ).toBe(false);
+    expect(
+      isLegalMove(s2, { kind: 'peel', from: xy(1, 1), count: 1 }),
+    ).toBe(true);
+    // 放置仍仅限空格
+    expect(
+      isLegalMove(s2, { kind: 'place', piece: P('兵', 'red'), to: xy(1, 1) }),
+    ).toBe(false);
+  });
+});
+
 // ---------- 放置 / 叠层 / 取层 ----------
 
 describe('放置', () => {
@@ -356,7 +436,10 @@ describe('放置', () => {
       isLegalMove(s, { kind: 'place', piece: P('兵', 'black'), to: xy(0, 0) }),
     ).toBe(false);
     // 开放可选规则A后可用,且保留实际颜色
-    const s2 = { ...s, options: { useEnemyForPlace: true, eatFacedown: false } };
+    const s2 = {
+      ...s,
+      options: { useEnemyForPlace: true, eatFacedown: false, allowLowCapture: false },
+    };
     expect(
       isLegalMove(s2, { kind: 'place', piece: P('兵', 'black'), to: xy(0, 0) }),
     ).toBe(true);
@@ -513,6 +596,32 @@ describe('胜负判定', () => {
     expect(s2.winner).toBeNull(); // 黑库存仍有 1 兵,不满足条件A
   });
 
+  it('条件A回归:对方仍有暗格棋时不算全灭(重大bug修复)', () => {
+    const s = mk(emptyBoard(), {}, { color: 'black' }, 0);
+    put(s, 0, 0, open(P('车', 'red')));
+    put(s, 1, 0, open(P('车', 'black'))); // 黑方唯一亮相棋
+    put(s, 0, 1, down(P('兵', 'black'))); // 黑方还有暗格棋,未被吃
+    const s2 = applyMove(s, { kind: 'move', from: xy(0, 0), to: xy(1, 0) });
+    expect(s2.winner).toBeNull(); // 黑暗格仍有棋,不能判全灭
+    expect(countPieces(s2, 1)).toBe(1); // 暗格黑兵计入
+  });
+
+  it('条件A:对方暗格棋翻出并吃光后才判胜', () => {
+    const s = mk(emptyBoard(), {}, { color: 'black' }, 0);
+    put(s, 0, 0, open(P('车', 'red')));
+    put(s, 1, 0, open(P('车', 'black')));
+    put(s, 2, 0, down(P('兵', 'black'))); // 黑方暗格棋
+    // 红吃黑亮相车(不判胜)
+    const s2 = applyMove(s, { kind: 'move', from: xy(0, 0), to: xy(1, 0) });
+    expect(s2.winner).toBeNull();
+    // 黑回合翻出暗格兵(轮到黑,只能翻棋)
+    const s3 = applyMove(s2, { kind: 'flip', pos: xy(2, 0) });
+    expect(s3.winner).toBeNull();
+    // 红吃掉最后一枚黑兵 → 全灭
+    const s4 = applyMove(s3, { kind: 'move', from: xy(1, 0), to: xy(2, 0) });
+    expect(s4.winner).toBe(0);
+  });
+
   it('条件B:对方无任何合法操作即胜(马被围死)', () => {
     const s = mk(emptyBoard(), { color: 'red' }, { color: 'black' }, 0);
     put(s, 1, 1, open(P('马', 'black')));
@@ -586,6 +695,58 @@ describe('悔棋', () => {
     expect(() =>
       applyMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 1) }),
     ).toThrow();
+  });
+});
+
+// ---------- 记谱走法日志 ----------
+
+describe('记谱走法日志', () => {
+  it('applyMove 追加走法,悔棋同步回退', () => {
+    const s = mk(emptyBoard(), { inventory: [P('兵', 'red')] }, {}, 0);
+    put(s, 0, 0, open(P('兵', 'red')));
+    const s2 = applyMove(s, { kind: 'place', piece: P('兵', 'red'), to: xy(3, 7) });
+    expect(s2.moveLog).toEqual([
+      { kind: 'place', piece: P('兵', 'red'), to: xy(3, 7) },
+    ]);
+    const back = undo(s2)!;
+    expect(back.moveLog).toEqual([]);
+  });
+
+  it('多步累积;悔棋后走新分支只保留新走法', () => {
+    const s = mk(
+      emptyBoard(),
+      { inventory: [P('兵', 'red')] },
+      { inventory: [P('兵', 'black')] },
+      0,
+    );
+    put(s, 0, 0, open(P('兵', 'red')));
+    put(s, 1, 0, open(P('兵', 'black')));
+    const s2 = applyMove(s, { kind: 'place', piece: P('兵', 'red'), to: xy(3, 7) });
+    const s3 = applyMove(s2, { kind: 'place', piece: P('兵', 'black'), to: xy(0, 7) });
+    expect(s3.moveLog).toEqual([
+      { kind: 'place', piece: P('兵', 'red'), to: xy(3, 7) },
+      { kind: 'place', piece: P('兵', 'black'), to: xy(0, 7) },
+    ]);
+    // 悔一步回到玩家1 回合,改走别处
+    const back = undo(s3)!;
+    expect(back.moveLog).toHaveLength(1);
+    const s4 = applyMove(back, { kind: 'place', piece: P('兵', 'black'), to: xy(2, 7) });
+    expect(s4.moveLog).toEqual([
+      { kind: 'place', piece: P('兵', 'red'), to: xy(3, 7) },
+      { kind: 'place', piece: P('兵', 'black'), to: xy(2, 7) },
+    ]);
+  });
+
+  it('投降与和局不追加走法', () => {
+    const s = mk(emptyBoard(), {}, {}, 0);
+    put(s, 0, 0, open(P('兵', 'red')));
+    put(s, 1, 0, open(P('兵', 'black')));
+    const s2 = applyMove(s, { kind: 'move', from: xy(0, 0), to: xy(1, 0) });
+    expect(s2.moveLog).toHaveLength(1);
+    const sur = surrender(s2, s2.current);
+    expect(sur.moveLog).toHaveLength(1);
+    const draw = markDraw(s2);
+    expect(draw.moveLog).toHaveLength(1);
   });
 });
 

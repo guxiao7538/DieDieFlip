@@ -10,7 +10,9 @@
   --black: #222;
   --gold: #c9a227;
   --green: #2e7d32;
-  --board-h: calc(100dvh - 168px);
+  /* 棋盘四边刻度条厚度 */
+  --edge: 15px;
+  --board-h: calc(100dvh - 168px - 2 * var(--edge));
 }
 
 * {
@@ -18,6 +20,32 @@
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* 滚动条国风化(覆盖棋谱列表、规则面板等所有滚动区域) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(40, 28, 16, 0.45);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #7a5a36, #5a3d26);
+  border: 1px solid #6d4c2e;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #8a683f, #6a4a30);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #6d4c2e rgba(40, 28, 16, 0.45);
 }
 
 html,
@@ -217,16 +245,72 @@ body {
 .board-wrap {
   flex: 1 1 auto;
   min-height: 0;
+  display: grid;
+  grid-template-columns: var(--edge) minmax(0, 1fr) var(--edge);
+  grid-template-rows: var(--edge) auto var(--edge);
+  /* 容器被 flex 拉伸时,多余空间留白而非拉大 auto 行(保证左右刻度与棋盘对齐) */
+  align-content: center;
+  grid-template-areas:
+    '. edge-top .'
+    'edge-left board edge-right'
+    '. edge-bottom .';
+  align-self: center;
+  justify-self: center;
+  width: min(96vw, calc(var(--board-h) / 2 + 2 * var(--edge)));
+  max-height: 100%;
+}
+
+/* 四边刻度:标注双方视角坐标,与记谱文本一致 */
+.edge {
+  display: flex;
+  color: var(--gold);
+  font-size: 12px;
+  line-height: 1;
+  user-select: none;
+}
+
+.edge-num {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.edge-top {
+  grid-area: edge-top;
+  flex-direction: row;
+}
+
+.edge-bottom {
+  grid-area: edge-bottom;
+  flex-direction: row;
+}
+
+.edge-left {
+  grid-area: edge-left;
+  flex-direction: column;
+}
+
+.edge-right {
+  grid-area: edge-right;
+  flex-direction: column;
+}
+
+.edge-top .edge-num,
+.edge-bottom .edge-num {
+  flex: 1;
+}
+
+.edge-left .edge-num,
+.edge-right .edge-num {
+  flex: 1;
+}
+
 .board {
+  grid-area: board;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  width: min(96vw, calc(var(--board-h) / 2));
+  width: 100%;
   aspect-ratio: 1 / 2;
   background:
     repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.05) 0 6px, transparent 6px 12px),
@@ -312,44 +396,6 @@ body {
 
 .piece.piece-black {
   color: var(--black);
-}
-
-/* 叠层立体效果:box-shadow 链逐层下移露出边缘(视觉封顶 3 层,真实层数见徽标) */
-.piece[data-ply='2'] {
-  box-shadow:
-    0 3px 0 0 #cbb98a,
-    0 6px 0 0 #bfa978,
-    0 10px 14px rgba(0, 0, 0, 0.45),
-    inset 0 -2px 4px rgba(90, 60, 25, 0.35);
-}
-
-.piece[data-ply='3'] {
-  box-shadow:
-    0 3px 0 0 #cbb98a,
-    0 6px 0 0 #bfa978,
-    0 9px 0 0 #b39a68,
-    0 13px 18px rgba(0, 0, 0, 0.5),
-    inset 0 -2px 4px rgba(90, 60, 25, 0.35);
-}
-
-.piece[data-ply='4'] {
-  box-shadow:
-    0 3px 0 0 #cbb98a,
-    0 6px 0 0 #bfa978,
-    0 9px 0 0 #b39a68,
-    0 12px 0 0 #a78d58,
-    0 16px 22px rgba(0, 0, 0, 0.55),
-    inset 0 -2px 4px rgba(90, 60, 25, 0.35);
-}
-
-/* 选中悬浮时保留堆叠链 */
-.cell.selected .piece[data-ply] {
-  box-shadow:
-    0 3px 0 0 #cbb98a,
-    0 6px 0 0 #bfa978,
-    0 9px 0 0 #b39a68,
-    0 16px 24px rgba(0, 0, 0, 0.55),
-    inset 0 -2px 4px rgba(90, 60, 25, 0.35);
 }
 
 /* 层数徽标 */
@@ -650,6 +696,267 @@ body {
   }
 }
 
+/* ---------- 玩法徽标(状态栏) ---------- */
+
+.mode-badge {
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  border: 1px solid #6d4c2e;
+  color: #cbb98f;
+  white-space: nowrap;
+}
+
+.mode-badge.on {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(201, 162, 39, 0.12);
+}
+
+/* ---------- 记谱面板 ---------- */
+
+.move-log {
+  display: none; /* 竖屏:常驻面板隐藏,用悬浮「谱」按钮;宽屏媒体中显示 */
+  flex-direction: column;
+  min-height: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #3f2c1b, #352518);
+  border: 1px solid #54402a;
+}
+
+.move-log .log-title {
+  font-size: 12px;
+  color: #cbb98f;
+  margin-bottom: 4px;
+  flex: none;
+}
+
+.move-log-list {
+  overflow-y: auto;
+  min-height: 0;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.log-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.log-row.current {
+  color: var(--gold);
+  font-weight: bold;
+}
+
+.log-no {
+  color: #7a6a50;
+  min-width: 22px;
+  text-align: right;
+}
+
+.log-row.current .log-no {
+  color: var(--gold);
+}
+
+.log-side-red {
+  color: #e88074;
+}
+
+.log-side-black {
+  color: #d5d5d5;
+}
+
+.log-text {
+  color: #e8dcba;
+  letter-spacing: 0.5px;
+}
+
+/* 竖屏悬浮「谱」按钮 */
+.log-fab {
+  position: fixed;
+  right: 2px;
+  top: 30%;
+  width: 32px;
+  height: 46px;
+  border-radius: 10px 0 0 10px;
+  border: 1px solid #6d4c2e;
+  border-right: none;
+  background: linear-gradient(180deg, #6d4c2e, #57391f);
+  color: var(--paper);
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 2px;
+  writing-mode: vertical-rl;
+  cursor: pointer;
+  z-index: 41;
+  box-shadow: -4px 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+/* 竖屏记谱浮层 */
+.log-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 12, 6, 0.6);
+  z-index: 45;
+}
+
+.log-card {
+  display: flex;
+  flex-direction: column;
+  width: min(300px, 86vw);
+  max-height: 74dvh;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #5a3d26, #46301e);
+  border: 2px solid #6d4c2e;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+.log-card .log-head {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+  flex: none;
+}
+
+.log-card .move-log {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---------- 主界面玩法选择浮层 ---------- */
+
+.options-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 12, 6, 0.75);
+  z-index: 55;
+  padding: 20px;
+}
+
+.options-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 22px 24px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 0%, #6d4c2e, #46301e);
+  border: 2px solid var(--gold);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+.options-card h2 {
+  font-size: 24px;
+  letter-spacing: 6px;
+  margin-bottom: 16px;
+  color: #f0e0c0;
+}
+
+/* 玩法卡片:整行可点,自绘国风勾选框 */
+.option-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #3f2c1b, #352518);
+  border: 1px solid #54402a;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.option-card.checked {
+  border-color: var(--gold);
+  box-shadow: 0 0 10px rgba(201, 162, 39, 0.3);
+}
+
+.option-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 自绘勾选框:木底金边,勾选金色填充 */
+.option-box {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: transparent;
+  background: linear-gradient(180deg, #57391f, #46301e);
+  border: 2px solid #6d4c2e;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.option-card.checked .option-box {
+  color: #2b2413;
+  background: linear-gradient(180deg, #d8b13f, #c9a227);
+  border-color: #e0c05a;
+}
+
+.option-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.option-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #f0e0c0;
+  letter-spacing: 2px;
+}
+
+/* 「默认」印章式标记 */
+.option-default {
+  padding: 0 7px;
+  border-radius: 3px;
+  background: rgba(168, 50, 42, 0.9);
+  border: 1px solid #d07a6e;
+  color: #f6e8d0;
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: 1px;
+  transform: rotate(-3deg);
+}
+
+.option-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #b8a078;
+}
+
+.options-card .row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
 /* ---------- 响应式:宽屏 ---------- */
 
 @media (min-width: 900px) {
@@ -692,7 +999,7 @@ body {
       'actions actions actions';
     gap: 8px;
     padding: 10px;
-    --board-h: calc(100dvh - 118px);
+    --board-h: calc(100dvh - 118px - 2 * var(--edge));
   }
 
   .status {
@@ -708,9 +1015,24 @@ body {
     align-self: start;
   }
 
-  .player-panel.p1 {
+  /* 右侧栏:黑方库存在上,记谱面板在下,撑满棋盘行高 */
+  .side-right {
     grid-area: right;
-    align-self: start;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  .side-right .move-log {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .log-fab {
+    display: none;
   }
 
   .board-wrap {

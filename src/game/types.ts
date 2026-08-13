@@ -24,12 +24,14 @@ export interface Pos {
   y: number;
 }
 
-/** 可选规则开关,第一版全部 false,仅预留接口 */
+/** 可选规则开关,默认全部 false(标准规则) */
 export interface GameOptions {
   /** 可选规则A:允许用库存中对方颜色的棋子叠层/放置(顶层仍须己方色) */
   useEnemyForPlace: boolean;
   /** 可选规则B:允许吃未翻开棋子 */
   eatFacedown: boolean;
+  /** 低吃高玩法(默认开启):吃己方棋不受层数限制,吃对方棋仍须层数 >= 对方 */
+  allowLowCapture: boolean;
 }
 
 export interface PlayerState {
@@ -48,6 +50,8 @@ export interface GameState {
   draw: boolean;
   /** 状态历史栈,悔棋用。applyMove 时把旧状态压栈 */
   history: GameState[];
+  /** 已执行走法序列(记谱用)。随 history 同步回退;投降/和局不计入 */
+  moveLog: Move[];
   options: GameOptions;
 }
 

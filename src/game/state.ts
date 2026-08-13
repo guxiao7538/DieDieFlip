@@ -19,6 +19,7 @@ import { BOARD_H, BOARD_W } from './types';
 export const DEFAULT_OPTIONS: GameOptions = {
   useEnemyForPlace: false,
   eatFacedown: false,
+  allowLowCapture: false,
 };
 
 /** Fisher-Yates 洗牌 */
@@ -56,6 +57,7 @@ export function createInitialState(
     winner: null,
     draw: false,
     history: [],
+    moveLog: [],
     options,
   };
 }
@@ -65,7 +67,8 @@ function clonePlayer(p: PlayerState): PlayerState {
   return { color: p.color, inventory: [...p.inventory] };
 }
 
-/** 某玩家全部棋子数:棋盘叠层中该色 + 库存(胜利条件A用) */
+/** 某玩家全部棋子数:棋盘叠层中该色 + 暗格中该色 + 库存(胜利条件A与库存面板显示用)。
+ * 暗格棋也计入——未翻开的棋只是"没亮出来",并未被吃掉(规则八.条件A)。 */
 export function countPieces(state: GameState, player: number): number {
   const color = state.players[player]!.color;
   if (color === null) return 0;
@@ -74,6 +77,8 @@ export function countPieces(state: GameState, player: number): number {
     for (const cell of row) {
       if (cell.kind === 'open') {
         n += cell.pieces.filter((p) => p.color === color).length;
+      } else if (cell.piece.color === color) {
+        n += 1;
       }
     }
   }
@@ -175,6 +180,7 @@ export function applyMove(state: GameState, move: Move): GameState {
     winner: null,
     draw: false,
     history: [...state.history, state],
+    moveLog: [...state.moveLog, move],
   };
   next.winner = checkWinner(next);
   return next;
