@@ -26,7 +26,7 @@ export interface Pos {
 
 /** 可选规则开关,默认全部 false(标准规则) */
 export interface GameOptions {
-  /** 可选规则A:允许用库存中对方颜色的棋子叠层/放置(顶层仍须己方色) */
+  /** 可选规则A:允许用库存中对方颜色的棋子叠层/放置,保留实际颜色;执行后顶层为该棋颜色,按顶层色即归属计入对方叠层(ADR-0005) */
   useEnemyForPlace: boolean;
   /** 可选规则B:允许吃未翻开棋子 */
   eatFacedown: boolean;

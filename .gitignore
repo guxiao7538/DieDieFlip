@@ -3,3 +3,4 @@ dist/
 gui-test-screenshots/
 AGENTS.md
 .zcode/
+graphify-out/

@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { fullSet } from './pieces';
-import { cellAt, isLegalMove, legalMoves, targetsFor, targetsInRange, topOf } from './moves';
+import { cellAt, isLegalMove, isOwnPile, legalMoves, targetsFor, targetsInRange, topOf } from './moves';
 import {
   applyMove,
   countPieces,
@@ -512,6 +512,23 @@ describe('叠层', () => {
         count: 1,
       }),
     ).toBe(true);
+  });
+
+  it('选项A(ADR-0005):敌方色棋可叠到己方同类叠层顶,保留实际颜色,归属转移对方', () => {
+    const s = {
+      ...mk(emptyBoard(), { inventory: [P('兵', 'black')] }, {}, 0),
+      options: { useEnemyForPlace: true, eatFacedown: false, allowLowCapture: false },
+    };
+    put(s, 0, 0, open(P('兵', 'red')));
+    expect(
+      isLegalMove(s, { kind: 'stack', piece: P('兵', 'black'), to: xy(0, 0), count: 1 }),
+    ).toBe(true);
+    const s2 = applyMove(s, { kind: 'stack', piece: P('兵', 'black'), to: xy(0, 0), count: 1 });
+    expect(cellAt(s2.board, xy(0, 0))).toEqual(open(P('兵', 'red'), P('兵', 'black')));
+    expect(s2.players[0]!.inventory).toEqual([]);
+    // 顶层已变敌方色:不再属于玩家0,属于黑方(玩家1)
+    expect(isOwnPile(s2, xy(0, 0), 0)).toBe(false);
+    expect(isOwnPile(s2, xy(0, 0), 1)).toBe(true);
   });
 });
 
