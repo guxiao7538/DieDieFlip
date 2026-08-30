@@ -664,6 +664,46 @@ describe('悔棋', () => {
       applyMove(s, { kind: 'move', from: xy(0, 0), to: xy(0, 1) }),
     ).toThrow();
   });
+
+  it('终局(和局/投降)压入历史,undo 恢复终局前状态(引擎层)', () => {
+    const s = mk(emptyBoard(), { inventory: [P('兵', 'red')] }, {}, 0);
+    put(s, 0, 0, open(P('兵', 'red')));
+    const s2 = applyMove(s, { kind: 'place', piece: P('兵', 'red'), to: xy(3, 7) });
+    const d = markDraw(s2);
+    expect(d.draw).toBe(true);
+    expect(undo(d)).toBe(s2);
+    const sur = surrender(s2, 0);
+    expect(sur.winner).toBe(1);
+    expect(undo(sur)).toBe(s2);
+  });
+});
+
+// ---------- 状态不可变 ----------
+
+describe('状态不可变', () => {
+  it('五种操作执行后原状态不被改动(AGENTS.md 不变式)', () => {
+    // 复合局面:一处叠层供取层/移动,黑子供吃,炮叠供叠层,暗格供翻,空格供放
+    const s = mk(
+      emptyBoard(),
+      { inventory: [P('炮', 'red'), P('炮', 'red'), P('兵', 'black')] },
+      {},
+      0,
+    );
+    put(s, 0, 0, open(P('兵', 'red'), P('兵', 'red'), P('车', 'red')));
+    put(s, 1, 0, open(P('兵', 'black')));
+    put(s, 2, 0, open(P('炮', 'red')));
+    put(s, 3, 0, down(P('马', 'black')));
+    const snapshot = structuredClone(s);
+
+    // 五种操作均针对原状态 s,依构造全部合法
+    applyMove(s, { kind: 'flip', pos: xy(3, 0) });
+    applyMove(s, { kind: 'peel', from: xy(0, 0), count: 1 });
+    applyMove(s, { kind: 'move', from: xy(0, 0), to: xy(1, 0) });
+    applyMove(s, { kind: 'place', piece: P('炮', 'red'), to: xy(3, 7) });
+    applyMove(s, { kind: 'stack', piece: P('炮', 'red'), to: xy(2, 0), count: 1 });
+
+    expect(s).toEqual(snapshot);
+  });
 });
 
 // ---------- 记谱走法日志 ----------

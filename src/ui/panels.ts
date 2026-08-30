@@ -245,7 +245,7 @@ export function renderActions(
   const undo = document.createElement('button');
   undo.className = 'btn ghost';
   undo.textContent = '悔一步';
-  undo.disabled = state.history.length === 0 || state.winner !== null;
+  undo.disabled = state.history.length === 0 || state.winner !== null || state.draw;
   undo.addEventListener('click', h.onUndo);
   el.appendChild(undo);
 
