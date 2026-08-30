@@ -175,8 +175,8 @@ function refresh(): void {
   // 右侧栏:黑方库存在上,记谱面板在下(宽屏);竖屏记谱面板由浮层提供
   const sideRight = document.createElement('div');
   sideRight.className = 'side-right';
-  sideRight.append(renderPlayer(state, 1, ui, hl, h.onInv), renderMoveLog(state));
-  players.append(renderPlayer(state, 0, ui, hl, h.onInv), sideRight);
+  sideRight.append(renderPlayer(state, 1, hl, h.onInv), renderMoveLog(state));
+  players.append(renderPlayer(state, 0, hl, h.onInv), sideRight);
 
   app.replaceChildren(
     renderStatus(state, ui),

@@ -7,6 +7,7 @@
 
 import { cellAt } from '../game/moves';
 import type { Color, GameState, Move, Piece, Pos } from '../game/types';
+import { BOARD_H, BOARD_W } from '../game/types';
 import { glyphOf } from './glyph';
 
 /** 本步走棋方:applyMove 后行动权已切换,故为对方 */
@@ -20,7 +21,7 @@ export function moverColor(after: GameState): Color | null {
 }
 
 function toView(pos: Pos, color: Color): Pos {
-  if (color === 'red') return { x: 4 - pos.x, y: 8 - pos.y };
+  if (color === 'red') return { x: BOARD_W - pos.x, y: BOARD_H - pos.y };
   return { x: pos.x + 1, y: pos.y + 1 };
 }
 

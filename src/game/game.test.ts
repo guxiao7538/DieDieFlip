@@ -14,58 +14,9 @@ import {
   surrender,
   undo,
 } from './state';
-import type {
-  Cell,
-  Color,
-  GameState,
-  Piece,
-  PieceType,
-  PlayerState,
-} from './types';
+import type { GameState, Piece } from './types';
 import { BOARD_H, BOARD_W } from './types';
-
-// ---------- 测试构造 helper ----------
-
-function P(type: PieceType, color: Color = 'red'): Piece {
-  return { type, color };
-}
-const open = (...pieces: Piece[]): Cell => ({ kind: 'open', pieces });
-const down = (p: Piece): Cell => ({ kind: 'facedown', piece: p });
-const empty = (): Cell => ({ kind: 'open', pieces: [] });
-
-function emptyBoard(): Cell[][] {
-  return Array.from({ length: BOARD_H }, () =>
-    Array.from({ length: BOARD_W }, empty),
-  );
-}
-
-function mk(
-  cells: Cell[][] = emptyBoard(),
-  p0: Partial<PlayerState> = {},
-  p1: Partial<PlayerState> = {},
-  current: 0 | 1 = 0,
-): GameState {
-  return {
-    board: cells,
-    players: [
-      { color: 'red', inventory: [], ...p0 },
-      { color: 'black', inventory: [], ...p1 },
-    ],
-    current,
-    winner: null,
-    draw: false,
-    history: [],
-    moveLog: [],
-    options: { useEnemyForPlace: false, eatFacedown: false, allowLowCapture: false },
-  };
-}
-
-/** 在 (x, y) 放棋,board[y][x] */
-function put(s: GameState, x: number, y: number, cell: Cell): void {
-  s.board[y]![x] = cell;
-}
-
-const xy = (x: number, y: number) => ({ x, y });
+import { down, empty, emptyBoard, mk, open, P, put, xy } from '../test/fixture';
 
 // ---------- 开局与翻棋 ----------
 

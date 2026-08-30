@@ -6,7 +6,7 @@
  * - 点高亮目标 → 执行对应操作;叠层/取层弹数量选择器
  */
 
-import { cellAt, isOwnPile, legalMoves, targetsFor, targetsInRange } from '../game/moves';
+import { cellAt, inventoryCount, isOwnPile, legalMoves, targetsFor, targetsInRange } from '../game/moves';
 import { applyMove } from '../game/state';
 import type { GameState, Move, Piece, Pos } from '../game/types';
 
@@ -44,8 +44,6 @@ export interface Highlights {
   stackTargets: Pos[];
   /** 走法范围内但层数不足不可吃的格(子力不足提示) */
   weakTargets: Pos[];
-  /** 选中格可执行取层(层数>=2),渲染角标按钮 */
-  peelable: Pos | null;
 }
 
 export function createUiState(): UiState {
@@ -64,13 +62,6 @@ function pushIfNew(list: Pos[], p: Pos): void {
   if (!list.some((q) => samePos(q, p))) list.push(p);
 }
 
-/** 库存中某棋的可用数量 */
-function invCount(state: GameState, piece: Piece): number {
-  return state.players[state.current]!.inventory.filter(
-    (p) => p.type === piece.type && p.color === piece.color,
-  ).length;
-}
-
 /** 依据选中项计算全部合法目标高亮 */
 export function computeHighlights(state: GameState, ui: UiState): Highlights {
   const h: Highlights = {
@@ -81,7 +72,6 @@ export function computeHighlights(state: GameState, ui: UiState): Highlights {
     placeTargets: [],
     stackTargets: [],
     weakTargets: [],
-    peelable: null,
   };
   if (state.winner !== null || state.draw || ui.pending) return h;
   const me = state.current;
@@ -115,10 +105,6 @@ export function computeHighlights(state: GameState, ui: UiState): Highlights {
       if (cell.kind === 'open' && cell.pieces.length > 0) {
         h.weakTargets.push(t);
       }
-    }
-    const cell = cellAt(state.board, ui.selectedPos);
-    if (cell.kind === 'open' && cell.pieces.length >= 2) {
-      h.peelable = ui.selectedPos;
     }
   }
 
@@ -249,7 +235,7 @@ export function handleInvClick(state: GameState, ui: UiState, piece: Piece): UiS
   // 选中可叠类且库存>1:在库存侧组合数量(pos=null 表示目标待定)
   let countDlg: CountDlg | null = null;
   if (selected) {
-    const n = invCount(state, selected);
+    const n = inventoryCount(state, state.current, selected);
     if (n > 1) {
       countDlg = { kind: 'stack', pos: null, piece: selected, min: 1, max: n, value: 1 };
     }
@@ -273,11 +259,12 @@ export function confirmCount(state: GameState, ui: UiState): ClickResult {
   return { state: apply(state, move), ui: resetSel(ui) };
 }
 
-/** 应用操作(带防御,非法时原样返回) */
+/** 应用操作(带防御,非法时原样返回并告警——UI 与引擎判定漂移时在此暴露) */
 function apply(state: GameState, move: Move): GameState {
   try {
     return applyMove(state, move);
-  } catch {
+  } catch (e) {
+    console.warn('非法操作被拒绝:', move, e);
     return state;
   }
 }

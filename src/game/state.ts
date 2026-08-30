@@ -4,10 +4,9 @@
  */
 
 import { fullSet } from './pieces';
-import { cellAt, isLegalMove, legalMoves } from './moves';
+import { isLegalMove, legalMoves } from './moves';
 import type {
   Cell,
-  Color,
   GameOptions,
   GameState,
   Move,
@@ -240,9 +239,4 @@ export function markDraw(state: GameState): GameState {
     draw: true,
     history: [...state.history, state],
   };
-}
-
-/** 当前行动者的阵营颜色(未定时为 null) */
-export function currentColor(state: GameState): Color | null {
-  return state.players[state.current]?.color ?? null;
 }

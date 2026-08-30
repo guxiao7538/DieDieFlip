@@ -144,7 +144,6 @@ function inventoryGroups(inventory: Piece[], ownColor: Piece['color']) {
 export function renderPlayer(
   state: GameState,
   player: number,
-  ui: UiState,
   hl: Highlights,
   onInv: (piece: Piece) => void,
 ): HTMLElement {
@@ -172,7 +171,7 @@ export function renderPlayer(
     const n = own.get(type);
     if (n && n > 0) {
       row.appendChild(
-        invPiece(state, player, { type, color: me.color! }, n, ui, hl, onInv, !mine),
+        invPiece({ type, color: me.color! }, n, hl, onInv, !mine),
       );
     }
   }
@@ -180,7 +179,7 @@ export function renderPlayer(
     const n = stuck.get(type);
     if (n && n > 0) {
       row.appendChild(
-        invPiece(state, player, { type, color: me.color === 'red' ? 'black' : 'red' }, n, ui, hl, onInv, true),
+        invPiece({ type, color: me.color === 'red' ? 'black' : 'red' }, n, hl, onInv, true),
       );
     }
   }
@@ -196,11 +195,8 @@ export function renderPlayer(
 
 /** 库存圆形棋子(己方色可点选,敌方色滞留置灰) */
 function invPiece(
-  state: GameState,
-  player: number,
   piece: Piece,
   n: number,
-  ui: UiState,
   hl: Highlights,
   onInv: (piece: Piece) => void,
   stuck: boolean,
@@ -335,11 +331,7 @@ export function renderCountBar(
 
   const label = document.createElement('span');
   label.className = 'count-label';
-  if (dlg.kind === 'stack') {
-    label.textContent = dlg.pos === null ? '叠' : '叠';
-  } else {
-    label.textContent = '取';
-  }
+  label.textContent = dlg.kind === 'stack' ? '叠' : '取';
   bar.appendChild(label);
 
   const minus = document.createElement('button');
