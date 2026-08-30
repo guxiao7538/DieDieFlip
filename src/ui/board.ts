@@ -1,4 +1,4 @@
-/** 棋盘渲染:四边刻度 + 4×8 网格,暗格圆片/叠层/高亮/层数徽标/取层角标 */
+/** 棋盘渲染:四边刻度 + 4×8 网格,暗格圆片/叠层/高亮/层数徽标(取层用底部计数条) */
 
 import type { GameState, Pos } from '../game/types';
 import { BOARD_H, BOARD_W } from '../game/types';
